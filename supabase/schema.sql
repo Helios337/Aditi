@@ -1,7 +1,11 @@
 -- ADITI Phase 0 schema (Supabase Postgres)
 -- Run in Supabase SQL Editor after creating your project.
+--
+-- If `vector` extension fails here, enable it first in Supabase Dashboard:
+-- Database → Extensions → search "vector" → Enable
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+CREATE EXTENSION IF NOT EXISTS "vector";
 
 CREATE TABLE IF NOT EXISTS questions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
