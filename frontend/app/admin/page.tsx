@@ -47,12 +47,17 @@ export default function AdminPage() {
 
   async function handleMarkReviewed(id: string) {
     if (!token) return;
-    await markReviewed(token, id, { reviewed: true, confidence_flag: "verified" });
-    setQuestions((current) =>
-      current.map((question) =>
-        question.id === id ? { ...question, reviewed: true, confidence_flag: "verified" } : question
-      )
-    );
+    try {
+      await markReviewed(token, id, { reviewed: true, confidence_flag: "verified" });
+      setQuestions((current) =>
+        current.map((question) =>
+          question.id === id ? { ...question, reviewed: true, confidence_flag: "verified" } : question
+        )
+      );
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to mark question reviewed");
+    }
   }
 
   return (

@@ -79,6 +79,10 @@ CREATE POLICY "Students can insert feedback on own questions"
         )
     );
 
+GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO service_role;
+
 -- Storage bucket for question images (create in Supabase Dashboard or via API):
 -- Bucket name: question-images (private)
 -- Allowed MIME: image/jpeg, image/png, image/webp

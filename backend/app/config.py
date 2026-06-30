@@ -10,11 +10,8 @@ class Settings(BaseSettings):
     supabase_service_role_key: str = "replace-me"
     supabase_jwt_secret: str = "replace-me"
 
-    mathpix_app_id: str = ""
-    mathpix_app_key: str = ""
-
     gemini_api_key: str = ""
-    gemini_model: str = "gemini-2.0-flash"
+    gemini_model: str = "gemini-2.0-flash-lite"
 
     cors_origins: str = "http://localhost:3000"
     admin_emails: str = ""

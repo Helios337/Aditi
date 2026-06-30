@@ -16,10 +16,12 @@ export default function DashboardPage() {
   const [email, setEmail] = useState<string | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const refreshQuestions = useCallback(async (accessToken: string) => {
     const data = await listQuestions(accessToken);
     setQuestions(data);
+    setError(null);
   }, []);
 
   useEffect(() => {
@@ -36,8 +38,14 @@ export default function DashboardPage() {
 
       setToken(session.access_token);
       setEmail(session.user.email ?? null);
-      await refreshQuestions(session.access_token);
-      setLoading(false);
+
+      try {
+        await refreshQuestions(session.access_token);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load questions");
+      } finally {
+        setLoading(false);
+      }
     }
 
     init();
@@ -55,6 +63,11 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-zinc-50">
       <Header email={email} />
       <main className="mx-auto grid max-w-5xl gap-6 px-4 py-8 lg:grid-cols-[1.1fr_0.9fr]">
+        {error ? (
+          <div className="lg:col-span-2 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+            {error}
+          </div>
+        ) : null}
         <QuestionUpload
           token={token}
           onUploaded={(id) => {

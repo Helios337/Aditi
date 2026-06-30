@@ -1,8 +1,8 @@
 # ADITI
 
-**ADITI** is a lean JEE doubt-solving pilot: upload a question image, OCR with Mathpix, solve with SymPy, explain with Gemini, and manually review flagged answers.
+**ADITI** is a lean JEE doubt-solving pilot: upload a question image, extract text with Gemini Vision, solve with SymPy, explain with Gemini, and manually review flagged answers.
 
-Phase 0 scope: **Upload → Mathpix OCR → SymPy → LLM explanation → human review**.
+Phase 0 scope: **Upload → Gemini Vision OCR → SymPy → LLM explanation → human review**.
 
 ## Project structure
 
@@ -10,16 +10,42 @@ Phase 0 scope: **Upload → Mathpix OCR → SymPy → LLM explanation → human 
 aditi/
 ├── backend/          FastAPI pipeline + API
 ├── frontend/         Next.js app (Vercel)
-└── supabase/         Postgres schema
+├── supabase/         Postgres schema
+├── docker-compose.yml
+└── .env.example      Docker + shared env template
 ```
 
 ## Prerequisites
 
-- Node.js 20+
-- Python 3.11+
+- Node.js 20+ and Python 3.11+ (local dev), **or Docker**
 - Supabase project (free tier)
-- Mathpix API credentials (free tier)
-- Google Gemini API key (free tier)
+- Google Gemini API key (free tier — vision OCR + explanations)
+
+## Quick start with Docker (recommended)
+
+Supabase stays hosted — Docker runs the backend and frontend only.
+
+```bash
+cd aditi
+cp .env.example .env
+# Edit .env with your Supabase + Gemini keys
+
+docker compose up --build
+```
+
+Open [http://localhost:3000](http://localhost:3000). Backend API: [http://localhost:8000/health](http://localhost:8000/health).
+
+| Service | Port |
+|---------|------|
+| Frontend | 3000 |
+| Backend | 8000 |
+
+Stop: `docker compose down`
+
+**Notes:**
+- Root `.env` feeds both containers via `docker-compose.yml`.
+- `NEXT_PUBLIC_*` vars are baked into the frontend image at build time. After changing them, rebuild: `docker compose up --build`.
+- For local dev without Docker, copy the same values into `backend/.env` and `frontend/.env.local`.
 
 ## 1. Supabase setup
 
@@ -52,8 +78,8 @@ Required env vars (see `.env.example`):
 | `SUPABASE_URL` | Supabase project URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server-side DB/storage access |
 | `SUPABASE_JWT_SECRET` | Validate frontend auth tokens |
-| `MATHPIX_APP_ID` / `MATHPIX_APP_KEY` | OCR |
-| `GEMINI_API_KEY` | Problem modeling + explanations |
+| `GEMINI_API_KEY` | Vision OCR, problem modeling, and explanations |
+| `GEMINI_MODEL` | e.g. `gemini-2.0-flash-lite` |
 | `ADMIN_EMAILS` | Comma-separated admin emails for `/admin` |
 | `CORS_ORIGINS` | e.g. `http://localhost:3000` |
 
@@ -106,7 +132,7 @@ Update `CORS_ORIGINS` and `NEXT_PUBLIC_API_URL` to production URLs.
 
 | Phase | Scope |
 |-------|-------|
-| **0 (current)** | OCR → SymPy → LLM explanation → manual review |
+| **0 (current)** | Gemini Vision OCR → SymPy → LLM explanation → manual review |
 | 1 | PYQ retrieval corpus + Wolfram escalation |
 | 2 | Vision LLM figures, Physics modeling, feedback |
 | 3 | Full-scale architecture if pilot succeeds |

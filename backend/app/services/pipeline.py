@@ -2,8 +2,12 @@ import traceback
 from uuid import UUID
 
 from app.auth import utc_now_iso
-from app.services.llm import generate_explanation, model_problem
-from app.services.ocr import mathpix_ocr
+from app.services.llm import (
+    GeminiRateLimitError,
+    GeminiServiceError,
+    extract_and_model_from_image,
+    generate_explanation,
+)
 from app.services.solver import solve_problem
 from app.services.supabase_client import get_supabase
 
@@ -14,17 +18,28 @@ def _update_question(question_id: UUID, payload: dict) -> None:
     supabase.table("questions").update(payload).eq("id", str(question_id)).execute()
 
 
+def _friendly_error(exc: Exception) -> str:
+    if isinstance(exc, (GeminiRateLimitError, GeminiServiceError)):
+        return str(exc)
+    message = str(exc)
+    if "429" in message or "quota" in message.lower() or "rate_limit" in message.lower():
+        return (
+            "Gemini API rate limit reached. Wait 1–2 minutes, then upload the question again."
+        )
+    return "Something went wrong while processing your question. Please try again in a minute."
+
+
 async def process_question(question_id: UUID, image_bytes: bytes, content_type: str) -> None:
     try:
         _update_question(question_id, {"status": "processing"})
 
-        ocr_text, ocr_confidence = await mathpix_ocr(image_bytes, content_type)
+        ocr_text, ocr_confidence, problem = await extract_and_model_from_image(
+            image_bytes, content_type
+        )
         _update_question(
             question_id,
             {"ocr_text": ocr_text, "ocr_confidence": ocr_confidence},
         )
-
-        problem = await model_problem(ocr_text, ocr_confidence)
         solve_result = solve_problem(problem)
 
         confidence_flag = solve_result.confidence_flag
@@ -62,7 +77,7 @@ async def process_question(question_id: UUID, image_bytes: bytes, content_type: 
             question_id,
             {
                 "status": "failed",
-                "error_message": str(exc),
+                "error_message": _friendly_error(exc),
                 "confidence_flag": "needs_review",
             },
         )

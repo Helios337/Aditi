@@ -96,15 +96,13 @@ async def get_question(
     question_id: UUID,
     user: Annotated[AuthUser, Depends(get_current_user)],
 ) -> QuestionResponse:
+    settings = get_settings()
     supabase = get_supabase()
-    result = (
-        supabase.table("questions")
-        .select("*")
-        .eq("id", str(question_id))
-        .eq("student_id", user.user_id)
-        .maybe_single()
-        .execute()
-    )
+    query = supabase.table("questions").select("*").eq("id", str(question_id))
+    if user.email not in settings.admin_email_list:
+        query = query.eq("student_id", user.user_id)
+
+    result = query.maybe_single().execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="Question not found")
     return _row_to_response(result.data)

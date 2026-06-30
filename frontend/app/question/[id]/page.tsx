@@ -102,6 +102,11 @@ export default function QuestionPage() {
                   {question.final_answer}
                 </p>
               </section>
+            ) : question.status === "failed" ? (
+              <section className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+                <p className="font-medium">Processing failed</p>
+                <p className="mt-2">{question.error_message || "Please try uploading again."}</p>
+              </section>
             ) : question.confidence_flag === "needs_review" ? (
               <section className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
                 This answer needs manual review. Working explanation is shown below, but no verified
@@ -118,7 +123,7 @@ export default function QuestionPage() {
               </section>
             ) : null}
 
-            {question.error_message ? (
+            {question.error_message && question.status !== "failed" ? (
               <p className="text-sm text-rose-600">{question.error_message}</p>
             ) : null}
 

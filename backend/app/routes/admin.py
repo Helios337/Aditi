@@ -60,7 +60,13 @@ async def review_question(
     if payload.confidence_flag is not None:
         update_payload["confidence_flag"] = payload.confidence_flag
 
-    result = supabase.table("questions").update(update_payload).eq("id", str(question_id)).execute()
+    result = (
+        supabase.table("questions")
+        .update(update_payload)
+        .eq("id", str(question_id))
+        .select("id")
+        .execute()
+    )
     if not result.data:
         raise HTTPException(status_code=404, detail="Question not found")
     return {"ok": True, "question_id": str(question_id)}

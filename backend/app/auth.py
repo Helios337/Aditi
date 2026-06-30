@@ -1,10 +1,10 @@
-from datetime import UTC, datetime
 from typing import Annotated
+from datetime import UTC, datetime
 
 from fastapi import Depends, Header, HTTPException, status
-from jose import JWTError, jwt
 
 from app.config import get_settings
+from app.services.supabase_client import get_supabase
 
 
 class AuthUser:
@@ -18,23 +18,17 @@ def get_current_user(authorization: Annotated[str | None, Header()] = None) -> A
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing bearer token")
 
     token = authorization.removeprefix("Bearer ").strip()
-    settings = get_settings()
+    supabase = get_supabase()
     try:
-        payload = jwt.decode(
-            token,
-            settings.supabase_jwt_secret,
-            algorithms=["HS256"],
-            audience="authenticated",
-        )
-    except JWTError as exc:
+        response = supabase.auth.get_user(token)
+    except Exception as exc:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token") from exc
 
-    user_id = payload.get("sub")
-    if not user_id:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload")
+    user = response.user
+    if not user or not user.id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
-    email = payload.get("email")
-    return AuthUser(user_id=user_id, email=email)
+    return AuthUser(user_id=user.id, email=user.email)
 
 
 def require_admin(user: Annotated[AuthUser, Depends(get_current_user)]) -> AuthUser:
