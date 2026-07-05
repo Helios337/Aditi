@@ -2,9 +2,10 @@ import traceback
 from uuid import UUID
 
 from app.auth import utc_now_iso
+from app.services.llm_utils import friendly_llm_error
 from app.services.llm import (
-    GeminiRateLimitError,
-    GeminiServiceError,
+    LLMRateLimitError,
+    LLMServiceError,
     extract_and_model_from_image,
     generate_explanation,
 )
@@ -19,14 +20,13 @@ def _update_question(question_id: UUID, payload: dict) -> None:
 
 
 def _friendly_error(exc: Exception) -> str:
-    if isinstance(exc, (GeminiRateLimitError, GeminiServiceError)):
+    if isinstance(exc, (LLMRateLimitError, LLMServiceError)):
         return str(exc)
     message = str(exc)
     if "429" in message or "quota" in message.lower() or "rate_limit" in message.lower():
-        return (
-            "Gemini API rate limit reached. Wait 1–2 minutes, then upload the question again."
-        )
-    return "Something went wrong while processing your question. Please try again in a minute."
+        return friendly_llm_error(exc)
+    return friendly_llm_error(exc)
+
 
 
 async def process_question(question_id: UUID, image_bytes: bytes, content_type: str) -> None:

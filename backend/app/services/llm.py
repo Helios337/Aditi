@@ -1,17 +1,23 @@
+import base64
 import json
 import re
 
-import google.generativeai as genai
-
 from app.config import get_settings
 from app.models import ProblemModel
-from app.services.gemini_utils import (
-    GeminiRateLimitError,
-    GeminiServiceError,
+from app.services.nvidia_client import nvidia_chat_completion
+from app.services.llm_utils import (
+    LLMRateLimitError,
+    LLMServiceError,
     call_with_rate_limit_retry,
 )
 
-__all__ = ["GeminiRateLimitError", "GeminiServiceError", "extract_and_model_from_image", "generate_explanation", "model_problem"]
+__all__ = [
+    "LLMRateLimitError",
+    "LLMServiceError",
+    "extract_and_model_from_image",
+    "generate_explanation",
+    "model_problem",
+]
 
 SYSTEM_PROMPT = """You are ADITI, a JEE math assistant. Given OCR text from a student question image,
 return ONLY valid JSON matching this schema:
@@ -76,33 +82,46 @@ def _unconfigured_problem(reason: str) -> ProblemModel:
     )
 
 
+def _image_data_url(image_bytes: bytes, content_type: str) -> str:
+    mime_type = content_type if content_type.startswith("image/") else "image/jpeg"
+    encoded = base64.b64encode(image_bytes).decode("ascii")
+    return f"data:{mime_type};base64,{encoded}"
+
+
 async def extract_and_model_from_image(
     image_bytes: bytes,
     content_type: str = "image/jpeg",
 ) -> tuple[str, float, ProblemModel]:
     settings = get_settings()
-    if not settings.gemini_api_key:
-        return "[Gemini API key not configured — set GEMINI_API_KEY]", 0.0, _unconfigured_problem(
-            "Gemini API key not configured"
+    if not settings.nvidia_api_key:
+        return "[NVIDIA API key not configured — set NVIDIA_API_KEY]", 0.0, _unconfigured_problem(
+            "NVIDIA API key not configured"
         )
 
-    genai.configure(api_key=settings.gemini_api_key)
-    model = genai.GenerativeModel(settings.gemini_model)
-    mime_type = content_type if content_type.startswith("image/") else "image/jpeg"
-    image_part = {"mime_type": mime_type, "data": image_bytes}
+    data_url = _image_data_url(image_bytes, content_type)
 
-    def _call():
-        return model.generate_content(
-            [VISION_EXTRACT_PROMPT, image_part],
-            generation_config={"temperature": 0.1, "response_mime_type": "application/json"},
+    def _call() -> str:
+        return nvidia_chat_completion(
+            model=settings.nvidia_model,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": VISION_EXTRACT_PROMPT},
+                        {"type": "image_url", "image_url": {"url": data_url}},
+                    ],
+                }
+            ],
+            json_mode=True,
+            temperature=0.1,
         )
 
-    response = await call_with_rate_limit_retry(_call)
-    data = _extract_json(response.text or "{}")
+    raw = await call_with_rate_limit_retry(_call)
+    data = _extract_json(raw)
 
     ocr_text = (data.get("ocr_text") or "").strip()
     if not ocr_text:
-        ocr_text = "[Gemini could not extract readable text from the image]"
+        ocr_text = "[Could not extract readable text from the image]"
 
     try:
         ocr_confidence = float(data.get("ocr_confidence", 0.5))
@@ -121,11 +140,8 @@ async def extract_and_model_from_image(
 
 async def model_problem(ocr_text: str, ocr_confidence: float) -> ProblemModel:
     settings = get_settings()
-    if not settings.gemini_api_key:
-        return _unconfigured_problem("Gemini API key not configured")
-
-    genai.configure(api_key=settings.gemini_api_key)
-    model = genai.GenerativeModel(settings.gemini_model)
+    if not settings.nvidia_api_key:
+        return _unconfigured_problem("NVIDIA API key not configured")
 
     user_prompt = f"""OCR confidence: {ocr_confidence:.2f}
 
@@ -133,14 +149,19 @@ OCR text:
 {ocr_text}
 """
 
-    def _call():
-        return model.generate_content(
-            [SYSTEM_PROMPT, user_prompt],
-            generation_config={"temperature": 0.1, "response_mime_type": "application/json"},
+    def _call() -> str:
+        return nvidia_chat_completion(
+            model=settings.nvidia_model,
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": user_prompt},
+            ],
+            json_mode=True,
+            temperature=0.1,
         )
 
-    response = await call_with_rate_limit_retry(_call)
-    data = _extract_json(response.text or "{}")
+    raw = await call_with_rate_limit_retry(_call)
+    data = _extract_json(raw)
     problem = ProblemModel.model_validate(data)
 
     if ocr_confidence < 0.6 and not problem.needs_review_reason:
@@ -157,12 +178,9 @@ async def generate_explanation(
     confidence_flag: str,
 ) -> str:
     settings = get_settings()
-    if not settings.gemini_api_key:
+    if not settings.nvidia_api_key:
         steps = "\n".join(f"- {step}" for step in solve_steps)
         return f"Verified answer: {final_answer}\n\nSteps:\n{steps}"
-
-    genai.configure(api_key=settings.gemini_api_key)
-    model = genai.GenerativeModel(settings.gemini_model)
 
     prompt = f"""Write a clear JEE-style explanation for a student.
 
@@ -183,8 +201,11 @@ Rules:
 - Use short numbered steps suitable for exam prep.
 """
 
-    def _call():
-        return model.generate_content(prompt, generation_config={"temperature": 0.3})
+    def _call() -> str:
+        return nvidia_chat_completion(
+            model=settings.nvidia_model,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.3,
+        )
 
-    response = await call_with_rate_limit_retry(_call)
-    return (response.text or "").strip()
+    return (await call_with_rate_limit_retry(_call)).strip()

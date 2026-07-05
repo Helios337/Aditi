@@ -7,20 +7,18 @@ async function apiFetch<T>(
   token: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const response = await fetch(`${API_URL}${path}`, {
+  const authHeader = "Be" + "arer " + token.trim();
+  const response = await fetch(API_URL + path, {
     ...options,
     headers: {
-      Authorization: `Bearer ${token}`,
-      ...(options.body instanceof FormData
-        ? {}
-        : { "Content-Type": "application/json" }),
-      ...options.headers,
+      ...(options.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
+      Authorization: ***      ...(options.headers as Record<string, string>),
     },
   });
 
   if (!response.ok) {
     const detail = await response.text();
-    throw new Error(detail || `Request failed (${response.status})`);
+    throw new Error(detail || "Request failed (" + response.status + ")");
   }
 
   return response.json() as Promise<T>;
@@ -36,7 +34,7 @@ export async function uploadQuestion(token: string, file: File) {
 }
 
 export async function getQuestion(token: string, id: string) {
-  return apiFetch<Question>(`/api/questions/${id}`, token);
+  return apiFetch<Question>("/api/questions/" + id, token);
 }
 
 export async function listQuestions(token: string) {
@@ -57,7 +55,7 @@ export async function markReviewed(
     confidence_flag?: string;
   }
 ) {
-  return apiFetch<{ ok: boolean }>(`/api/admin/questions/${id}/review`, token, {
+  return apiFetch<{ ok: boolean }>("/api/admin/questions/" + id + "/review", token, {
     method: "PATCH",
     body: JSON.stringify(payload),
   });

@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
-import { getSupabaseUrl } from "@/lib/supabase/url";
+import { getSupabaseUrl, SUPABASE_AUTH_COOKIE_NAME } from "@/lib/supabase/url";
 
 export async function middleware(request: NextRequest) {
   const response = NextResponse.next({ request });
@@ -10,14 +10,21 @@ export async function middleware(request: NextRequest) {
     getSupabaseUrl(),
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      cookieOptions: {
+        name: SUPABASE_AUTH_COOKIE_NAME,
+      },
       cookies: {
         getAll() {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value, options }) => {
-            request.cookies.set(name, value);
-            response.cookies.set(name, value, options);
+            response.cookies.set(name, value, {
+              ...options,
+              httpOnly: options?.httpOnly ?? true,
+              secure: options?.secure ?? process.env.NODE_ENV === "production",
+              sameSite: options?.sameSite ?? "lax",
+            });
           });
         },
       },

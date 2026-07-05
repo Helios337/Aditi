@@ -10,8 +10,9 @@ class Settings(BaseSettings):
     supabase_service_role_key: str = "replace-me"
     supabase_jwt_secret: str = "replace-me"
 
-    gemini_api_key: str = ""
-    gemini_model: str = "gemini-2.0-flash-lite"
+    nvidia_api_key: str = ""
+    nvidia_base_url: str = "https://integrate.api.nvidia.com/v1/chat/completions"
+    nvidia_model: str = "minimaxai/minimax-m3"
 
     cors_origins: str = "http://localhost:3000"
     admin_emails: str = ""

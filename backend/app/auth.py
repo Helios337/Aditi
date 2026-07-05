@@ -1,10 +1,13 @@
-from typing import Annotated
+import logging
 from datetime import UTC, datetime
+from typing import Annotated
 
-from fastapi import Depends, Header, HTTPException, status
+from fastapi import Depends, HTTPException, Request
 
 from app.config import get_settings
 from app.services.supabase_client import get_supabase
+
+logger = logging.getLogger("aditi.auth")
 
 
 class AuthUser:
@@ -13,28 +16,43 @@ class AuthUser:
         self.email = (email or "").lower()
 
 
-def get_current_user(authorization: Annotated[str | None, Header()] = None) -> AuthUser:
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing bearer token")
+def get_current_user(request: Request) -> AuthUser:
+    authorization = request.headers.get("authorization") or ""
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(
+            status_code=401,
+            detail="Missing bearer token",
+        )
 
     token = authorization.removeprefix("Bearer ").strip()
     supabase = get_supabase()
     try:
         response = supabase.auth.get_user(token)
     except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token") from exc
+        logger.debug("Supabase auth.get_user failed: %s", exc)
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid token",
+        ) from exc
 
     user = response.user
-    if not user or not user.id:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+    if not user or not getattr(user, "id", None):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid token",
+        )
 
-    return AuthUser(user_id=user.id, email=user.email)
+    return AuthUser(user_id=user.id, email=getattr(user, "email", None))
 
 
 def require_admin(user: Annotated[AuthUser, Depends(get_current_user)]) -> AuthUser:
     settings = get_settings()
-    if user.email not in settings.admin_email_list:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
+    admin_set = {e.strip().lower() for e in settings.admin_email_list}
+    if (user.email or "") not in admin_set:
+        raise HTTPException(
+            status_code=403,
+            detail="Admin access required",
+        )
     return user
 
 

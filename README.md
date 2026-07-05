@@ -1,8 +1,8 @@
 # ADITI
 
-**ADITI** is a lean JEE doubt-solving pilot: upload a question image, extract text with Gemini Vision, solve with SymPy, explain with Gemini, and manually review flagged answers.
+**ADITI** is a lean JEE doubt-solving pilot: upload a question image, extract text with NVIDIA MiniMax-M3, solve with SymPy, explain with MiniMax-M3, and manually review flagged answers.
 
-Phase 0 scope: **Upload → Gemini Vision OCR → SymPy → LLM explanation → human review**.
+Phase 0 scope: **Upload → NVIDIA MiniMax-M3 Vision OCR → SymPy → LLM explanation → human review**.
 
 ## Project structure
 
@@ -19,7 +19,7 @@ aditi/
 
 - Node.js 20+ and Python 3.11+ (local dev), **or Docker**
 - Supabase project (free tier)
-- Google Gemini API key (free tier — vision OCR + explanations)
+- NVIDIA API key (model: `minimaxai/minimax-m3` — vision OCR + explanations; get one at https://build.nvidia.com)
 
 ## Quick start with Docker (recommended)
 
@@ -28,7 +28,7 @@ Supabase stays hosted — Docker runs the backend and frontend only.
 ```bash
 cd aditi
 cp .env.example .env
-# Edit .env with your Supabase + Gemini keys
+# Edit .env with your Supabase + NVIDIA keys
 
 docker compose up --build
 ```
@@ -78,8 +78,8 @@ Required env vars (see `.env.example`):
 | `SUPABASE_URL` | Supabase project URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server-side DB/storage access |
 | `SUPABASE_JWT_SECRET` | Validate frontend auth tokens |
-| `GEMINI_API_KEY` | Vision OCR, problem modeling, and explanations |
-| `GEMINI_MODEL` | e.g. `gemini-2.0-flash-lite` |
+| `NVIDIA_API_KEY` | Vision OCR, problem modeling, and explanations |
+| `NVIDIA_MODEL` | e.g. `minimaxai/minimax-m3` |
 | `ADMIN_EMAILS` | Comma-separated admin emails for `/admin` |
 | `CORS_ORIGINS` | e.g. `http://localhost:3000` |
 
@@ -132,7 +132,7 @@ Update `CORS_ORIGINS` and `NEXT_PUBLIC_API_URL` to production URLs.
 
 | Phase | Scope |
 |-------|-------|
-| **0 (current)** | Gemini Vision OCR → SymPy → LLM explanation → manual review |
+| **0 (current)** | NVIDIA MiniMax-M3 Vision OCR → SymPy → LLM explanation → manual review |
 | 1 | PYQ retrieval corpus + Wolfram escalation |
 | 2 | Vision LLM figures, Physics modeling, feedback |
 | 3 | Full-scale architecture if pilot succeeds |

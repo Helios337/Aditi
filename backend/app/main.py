@@ -6,11 +6,20 @@ from app.routes import admin, questions
 
 settings = get_settings()
 
-app = FastAPI(
-    title="ADITI API",
-    description="JEE doubt-solving pilot backend — Phase 0",
-    version="0.1.0",
-)
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("aditi.backend")
+
+app = FastAPI(title="ADITI API", version="0.1.0")
+
+@app.on_event("startup")
+async def on_startup():
+    logger.info("Starting ADITI backend")
+
+@app.on_event("shutdown")
+async def on_shutdown():
+    logger.info("Shutting down ADITI backend")
 
 app.add_middleware(
     CORSMiddleware,
