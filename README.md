@@ -1,8 +1,8 @@
 # ADITI
 
-**ADITI** is a lean JEE doubt-solving pilot: upload a question image, extract text with NVIDIA MiniMax-M3, solve with SymPy, explain with MiniMax-M3, and manually review flagged answers.
+**ADITI** is a lean JEE doubt-solving pilot: upload a question image, extract text with an OpenRouter vision model, solve with SymPy, explain with an OpenRouter LLM, and manually review flagged answers.
 
-Phase 0 scope: **Upload → NVIDIA MiniMax-M3 Vision OCR → SymPy → LLM explanation → human review**.
+Phase 0 scope: **Upload → Vision OCR → SymPy → LLM explanation → human review**.
 
 ## Project structure
 
@@ -19,7 +19,7 @@ aditi/
 
 - Node.js 20+ and Python 3.11+ (local dev), **or Docker**
 - Supabase project (free tier)
-- NVIDIA API key (model: `minimaxai/minimax-m3` — vision OCR + explanations; get one at https://build.nvidia.com)
+- OpenRouter API key (get one at https://openrouter.ai/keys; free vision + text models configured in `.env`)
 
 ## Quick start with Docker (recommended)
 
@@ -28,7 +28,7 @@ Supabase stays hosted — Docker runs the backend and frontend only.
 ```bash
 cd aditi
 cp .env.example .env
-# Edit .env with your Supabase + NVIDIA keys
+# Edit .env with your Supabase + OpenRouter keys
 
 docker compose up --build
 ```
@@ -78,8 +78,9 @@ Required env vars (see `.env.example`):
 | `SUPABASE_URL` | Supabase project URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server-side DB/storage access |
 | `SUPABASE_JWT_SECRET` | Validate frontend auth tokens |
-| `NVIDIA_API_KEY` | Vision OCR, problem modeling, and explanations |
-| `NVIDIA_MODEL` | e.g. `minimaxai/minimax-m3` |
+| `OPENROUTER_API_KEY` | OpenRouter API key for LLM calls |
+| `OPENROUTER_VISION_MODEL` | Vision model used to OCR question images (e.g. `qwen/qwen2.5-vl-72b-instruct:free`) |
+| `OPENROUTER_TEXT_MODEL` | Text model for problem modeling + explanations (e.g. `deepseek/deepseek-r1:free`) |
 | `ADMIN_EMAILS` | Comma-separated admin emails for `/admin` |
 | `CORS_ORIGINS` | e.g. `http://localhost:3000` |
 
@@ -132,7 +133,7 @@ Update `CORS_ORIGINS` and `NEXT_PUBLIC_API_URL` to production URLs.
 
 | Phase | Scope |
 |-------|-------|
-| **0 (current)** | NVIDIA MiniMax-M3 Vision OCR → SymPy → LLM explanation → manual review |
+| **0 (current)** | Vision OCR (OpenRouter) → SymPy → LLM explanation → manual review |
 | 1 | PYQ retrieval corpus + Wolfram escalation |
 | 2 | Vision LLM figures, Physics modeling, feedback |
 | 3 | Full-scale architecture if pilot succeeds |
