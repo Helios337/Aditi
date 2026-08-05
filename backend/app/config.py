@@ -10,9 +10,12 @@ class Settings(BaseSettings):
     supabase_service_role_key: str = "replace-me"
     supabase_jwt_secret: str = "replace-me"
 
-    nvidia_api_key: str = ""
-    nvidia_base_url: str = "https://integrate.api.nvidia.com/v1/chat/completions"
-    nvidia_model: str = "minimaxai/minimax-m3"
+    openrouter_api_key: str = ""
+    openrouter_base_url: str = "https://openrouter.ai/api/v1/chat/completions"
+    openrouter_vision_model: str = "qwen/qwen2.5-vl-72b-instruct:free"
+    openrouter_text_model: str = "deepseek/deepseek-r1:free"
+    openrouter_site_url: str = "https://github.com/Helios337/Aditi"
+    openrouter_site_name: str = "Aditi"
 
     cors_origins: str = "http://localhost:3000"
     admin_emails: str = ""

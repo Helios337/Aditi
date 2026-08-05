@@ -4,7 +4,7 @@ import re
 
 from app.config import get_settings
 from app.models import ProblemModel
-from app.services.nvidia_client import nvidia_chat_completion
+from app.services.openrouter_client import openrouter_chat_completion
 from app.services.llm_utils import (
     LLMRateLimitError,
     LLMServiceError,
@@ -93,16 +93,16 @@ async def extract_and_model_from_image(
     content_type: str = "image/jpeg",
 ) -> tuple[str, float, ProblemModel]:
     settings = get_settings()
-    if not settings.nvidia_api_key:
-        return "[NVIDIA API key not configured — set NVIDIA_API_KEY]", 0.0, _unconfigured_problem(
-            "NVIDIA API key not configured"
+    if not settings.openrouter_api_key:
+        return "[OpenRouter API key not configured - set OPENROUTER_API_KEY]", 0.0, _unconfigured_problem(
+            "OpenRouter API key not configured"
         )
 
     data_url = _image_data_url(image_bytes, content_type)
 
     def _call() -> str:
-        return nvidia_chat_completion(
-            model=settings.nvidia_model,
+        return openrouter_chat_completion(
+            model=settings.openrouter_vision_model,
             messages=[
                 {
                     "role": "user",
@@ -140,8 +140,8 @@ async def extract_and_model_from_image(
 
 async def model_problem(ocr_text: str, ocr_confidence: float) -> ProblemModel:
     settings = get_settings()
-    if not settings.nvidia_api_key:
-        return _unconfigured_problem("NVIDIA API key not configured")
+    if not settings.openrouter_api_key:
+        return _unconfigured_problem("OpenRouter API key not configured")
 
     user_prompt = f"""OCR confidence: {ocr_confidence:.2f}
 
@@ -150,8 +150,8 @@ OCR text:
 """
 
     def _call() -> str:
-        return nvidia_chat_completion(
-            model=settings.nvidia_model,
+        return openrouter_chat_completion(
+            model=settings.openrouter_text_model,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": user_prompt},
@@ -178,7 +178,7 @@ async def generate_explanation(
     confidence_flag: str,
 ) -> str:
     settings = get_settings()
-    if not settings.nvidia_api_key:
+    if not settings.openrouter_api_key:
         steps = "\n".join(f"- {step}" for step in solve_steps)
         return f"Verified answer: {final_answer}\n\nSteps:\n{steps}"
 
@@ -202,8 +202,8 @@ Rules:
 """
 
     def _call() -> str:
-        return nvidia_chat_completion(
-            model=settings.nvidia_model,
+        return openrouter_chat_completion(
+            model=settings.openrouter_text_model,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.3,
         )

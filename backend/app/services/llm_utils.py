@@ -25,16 +25,16 @@ def friendly_llm_error(exc: BaseException) -> str:
     message = str(exc).lower()
     if "401" in message or "invalid api key" in message or "authentication" in message:
         return (
-            "NVIDIA API key is invalid or missing. Create a key at "
-            "https://build.nvidia.com and set NVIDIA_API_KEY in .env, "
+            "OpenRouter API key is invalid or missing. Create a key at "
+            "https://openrouter.ai/keys and set OPENROUTER_API_KEY in .env, "
             "then restart the backend."
         )
     if is_rate_limit_error(exc):
         return (
-            "NVIDIA API rate limit reached. Wait 1–2 minutes, then upload the question again."
+            "OpenRouter API rate limit reached. Wait 1-2 minutes, then upload the question again."
         )
     if "api key" in message:
-        return "NVIDIA API key is missing or invalid. Check NVIDIA_API_KEY in backend/.env."
+        return "OpenRouter API key is missing or invalid. Check OPENROUTER_API_KEY in backend/.env."
     return "The AI service could not process this image right now. Please try again in a minute."
 
 
